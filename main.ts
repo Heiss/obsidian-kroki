@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext, Plugin, PluginSettingTab, Setting, ToggleComponent, request } from 'obsidian';
+import { App, MarkdownPostProcessorContext, Plugin, PluginSettingTab, Setting, ToggleComponent, Vault, request } from 'obsidian';
 
 import * as pako from 'pako';
 
@@ -54,29 +54,41 @@ export default class KrokiPlugin extends Plugin {
     settings: KrokiSettings;
 
     svgProcessor = async (diagType: string, source: string, el: HTMLElement, _: MarkdownPostProcessorContext) => {
-        const dest = document.createElement('div');
-        const urlPrefix = this.settings.server_url + diagType + "/svg/";
-        source = source.replace(/&nbsp;/gi, " ");
+        console.log("got", source)
+        if (source.startsWith("@from_file:")) {
+            const split = source.split(":", 2);
+            const filepath = split[1];
+            console.log(filepath)
+            const file = this.app.vault.getFileByPath(filepath);
+            if (file) {
+                source = await this.app.vault.cachedRead(file);
+            } else {
+                console.log(`file ${filepath} not found`);
+            }
+        }
 
+        const dest = document.createElement('div');
+        const urlPrefix = this.settings.server_url + diagType + "/svg";
+        source = source.replace(/&nbsp;/gi, " ");
+        
         // encode the source 
         // per: https://docs.kroki.io/kroki/setup/encode-diagram/#javascript
         const data = new TextEncoder().encode(source);
         const compressed = pako.deflate(data, { level: 9 });
         const encodedSource = Buffer.from(compressed)
-            .toString('base64')
-            .replace(/\+/g, '-').replace(/\//g, '_');
-
+        .toString('base64')
+        .replace(/\+/g, '-').replace(/\//g, '_');
+        
+        dest.classList.add("internal-embed", "media-embed", "image-embed", "is-loaded");
+        dest.setAttribute("src", urlPrefix + "/" + encodedSource)
+        dest.setAttribute("alt", "Kroki Diagram")
+        dest.setAttribute("contenteditable", "false")
         const img = document.createElement("img");
-        img.src = urlPrefix + encodedSource;
+        img.src = urlPrefix + "/" + encodedSource;
         img.useMap = "#" + encodedSource;
 
-        const result = await request({ method: 'GET', url: urlPrefix + encodedSource });
-
-        // if (result.ok) {
-        dest.innerHTML = result;
-        dest.children[0].setAttr("name", encodedSource);
-        // }
-        el.appendChild(dest);
+        dest.appendChild(img)
+        el.appendChild(dest)
     };
 
     async onload(): Promise<void> {

@@ -13,6 +13,18 @@ Create a fenced codeblock using one of the diagram types supported by kroki as t
 See the [Kroki site](https://kroki.io) for a complete list of supported diagram types.
 Specify your diagram code inside the codeblock.
 
+### Include plaintext files
+
+With the keyword `@from_file:<relative filepath from vault root folder>` can be included any text file into the fence block.
+
+The following example assumes, that there is a structurizr workspace.dsl is placed in root folder of vault.
+
+<pre>
+```structurizr
+@from-file:workspace.dsl
+```
+</pre>
+
 ## Examples
 
 See [kroki-test.md](kroki-test.md) for examples of each of the currently supported diagram types.
